@@ -152,11 +152,21 @@ namespace WandEnhancer.Core
             // Never leave a patched archive behind without its launcher.
             try
             {
+                DiagnosticReporter.Report(_weModConfig, _unpackedPath, _asarPath, _config,
+                    "pristine-before-content", _logger);
+
                 ExtractSources();
                 new AsarContentPatcher(_unpackedPath, _logger, new JavaScriptPatchApplier(_logger)).Patch(_config.PatchTypes);
                 new RemotePanelInjector(_unpackedPath, _logger).Inject(_config.PatchTypes, _config.CustomScriptPaths);
                 PackSources();
+
+                DiagnosticReporter.Report(_weModConfig, _unpackedPath, _asarPath, _config,
+                    "after-content-before-enablement", _logger);
+
                 _strategy.ApplyEnablement(new PatchContext(_weModConfig, _logger, _unpackedPath));
+
+                DiagnosticReporter.Report(_weModConfig, _unpackedPath, _asarPath, _config,
+                    "after-enablement", _logger);
 
                 // Supervised needs to intercept every start; static never does.
                 if (_strategy.RequiresLauncherAlways)
