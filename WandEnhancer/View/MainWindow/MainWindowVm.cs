@@ -202,6 +202,10 @@ namespace WandEnhancer.View.MainWindow
                         }
                     });
                     IsBusy = false;
+                    if (AlreadyPatched)
+                    {
+                        WriteCompatibilityReport(config);
+                    }
                 });
             }), LocalizationManager.Get("pv_popup_title"));
         }
@@ -220,6 +224,49 @@ namespace WandEnhancer.View.MainWindow
                 // Force CanExecute re-evaluation when appending log entries.
                 System.Windows.Input.CommandManager.InvalidateRequerySuggested();
             });
+        }
+
+        private void WriteCompatibilityReport(PatchConfig config)
+        {
+            try
+            {
+                string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                string path = Path.Combine(desktop,
+                    $"wand-12.63-compatibility-report-{DateTime.Now:yyyyMMdd-HHmmss}.txt");
+
+                var builder = new StringBuilder();
+                builder.AppendLine("Wand 12.63 Compatibility Diagnostic");
+                builder.AppendLine("===================================");
+                builder.AppendLine($"Generated: {DateTime.Now:O}");
+                builder.AppendLine($"Enhancer version: {Constants.Version}");
+                builder.AppendLine($"Build: {Constants.Build}");
+                builder.AppendLine($"Strategy: {config?.Strategy}");
+                builder.AppendLine($"Patches: {(config?.PatchTypes == null ? "(none)" : string.Join(",", config.PatchTypes))}");
+                builder.AppendLine();
+                builder.AppendLine("Runtime observation from Wand DevTools:");
+                builder.AppendLine("[paste the trainer/integrity error here]");
+                builder.AppendLine();
+                builder.AppendLine("Patch diagnostics:");
+
+                foreach (var entry in LogList)
+                {
+                    if (entry.Message.Contains("[DIAG 12.63]") ||
+                        entry.Message.Contains("[ENHANCER] ASAR integrity") ||
+                        entry.Message.Contains("[ENHANCER] Auxiliary") ||
+                        entry.Message.Contains("[ENHANCER] Launcher deployed") ||
+                        entry.Message.Contains("[ENHANCER] Done"))
+                    {
+                        builder.AppendLine(entry.Message);
+                    }
+                }
+
+                File.WriteAllText(path, builder.ToString());
+                Log($"[DIAG 12.63] Compatibility report written to {path}", ELogType.Success);
+            }
+            catch (Exception e)
+            {
+                Log($"[DIAG 12.63] Could not write compatibility report: {e.Message}", ELogType.Warn);
+            }
         }
 
         private void OnOpenSettings(object param)
